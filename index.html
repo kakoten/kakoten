@@ -427,6 +427,89 @@
     transform: translateY(0);
   }
 
+  /* AI FORECAST SECTION */
+  .ai-forecast {
+    background: #0d2a42;
+    padding: 80px 20px;
+  }
+
+  .ai-forecast .section-label { color: var(--sun-bright); }
+  .ai-forecast .section-title { color: white; }
+
+  .ai-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 36px 32px;
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--sky-light), var(--sun-bright));
+  }
+
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,180,0,0.15);
+    border: 1px solid rgba(255,180,0,0.3);
+    color: var(--sun-bright);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+  }
+
+  .ai-text {
+    font-size: 15px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.9;
+    white-space: pre-line;
+    min-height: 80px;
+  }
+
+  .ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.4);
+    font-size: 14px;
+  }
+
+  .ai-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--sun-bright);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .ai-date {
+    margin-top: 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    text-align: right;
+  }
+
+  .ai-error {
+    color: rgba(255,120,120,0.8);
+    font-size: 14px;
+  }
+
   @media (max-width: 600px) {
     .ranking-header, .ranking-row {
       grid-template-columns: 50px 1fr 80px;
@@ -550,6 +633,28 @@
   </div>
 </section>
 
+<!-- AI FORECAST -->
+<section class="ai-forecast">
+  <div class="section-inner">
+    <div class="reveal">
+      <p class="section-label">AI Forecast</p>
+      <h2 class="section-title">🤖 かこてんAI予報</h2>
+      <p style="font-size:14px; color:rgba(255,255,255,0.5); margin-top:8px;">3社の予報データをAIが総合分析。明日の東京の天気をお伝えします。</p>
+    </div>
+
+    <div class="ai-card reveal">
+      <div class="ai-badge">✨ AI ANALYSIS</div>
+      <div id="ai-result">
+        <div class="ai-loading">
+          <div class="ai-spinner"></div>
+          <span>AIが予報データを分析中...</span>
+        </div>
+      </div>
+      <div class="ai-date" id="ai-date"></div>
+    </div>
+  </div>
+</section>
+
 <!-- X LINK -->
 <section class="x-section">
   <div class="section-inner" style="text-align:center;">
@@ -581,6 +686,27 @@
 </footer>
 
 <script>
+  // AI Forecast
+  async function loadAiForecast() {
+    const resultEl = document.getElementById('ai-result');
+    const dateEl = document.getElementById('ai-date');
+    try {
+      const res = await fetch('/api/forecast');
+      const data = await res.json();
+      if (data.result) {
+        resultEl.innerHTML = `<div class="ai-text">${data.result}</div>`;
+        if (data.date) {
+          dateEl.textContent = `対象日: ${data.date}`;
+        }
+      } else {
+        resultEl.innerHTML = `<div class="ai-error">データを取得できませんでした。</div>`;
+      }
+    } catch (e) {
+      resultEl.innerHTML = `<div class="ai-error">AIサービスに接続できませんでした。</div>`;
+    }
+  }
+  loadAiForecast();
+
   // Scroll reveal
   const reveals = document.querySelectorAll('.reveal');
   const observer = new IntersectionObserver((entries) => {
