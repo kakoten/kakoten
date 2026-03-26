@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>かこてん — 天気予報アプリ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #0a84c8;
+    --sky-light: #38b6ff;
+    --sky-deep: #054a7a;
+    --sun: #ff8c00;
+    --sun-bright: #ffb830;
+    --white: #ffffff;
+    --text-dark: #0d2a42;
+    --text-mid: #2a5a8a;
+    --bg: #f0f8ff;
+    --card: #ffffff;
+    --border: rgba(10,132,200,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #054a7a 0%, #0a84c8 100%);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 20px rgba(5,74,122,0.3);
+  }
+
+  .header-logo {
+    font-size: 28px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffffff, #ffe066);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none;
+  }
+
+  .header-subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 1px;
+  }
+
+  /* SEARCH PANEL */
+  .search-panel {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 12px rgba(10,132,200,0.06);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sky);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-family: 'Oswald', sans-serif;
+  }
+
+  .field select, .field input {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .field select:focus, .field input:focus {
+    border-color: var(--sky);
+  }
+
+  .search-btn {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--sky), var(--sky-light));
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 16px rgba(10,132,200,0.3);
+    white-space: nowrap;
+  }
+
+  .search-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(10,132,200,0.4);
+  }
+
+  .search-btn:active { transform: translateY(0); }
+
+  /* MAIN */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* STATE MESSAGES */
+  .state-msg {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-mid);
+  }
+
+  .state-msg .icon { font-size: 48px; margin-bottom: 16px; }
+  .state-msg p { font-size: 16px; opacity: 0.7; }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 80px 20px;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--sky);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading p { color: var(--text-mid); font-size: 14px; }
+
+  /* DATE BADGE */
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .result-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text-dark);
+  }
+
+  .date-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .date-badge.future {
+    background: linear-gradient(135deg, #0a84c8, #38b6ff);
+    color: white;
+  }
+
+  .date-badge.past {
+    background: linear-gradient(135deg, #2a5a8a, #054a7a);
+    color: rgba(255,255,255,0.9);
+  }
+
+  .date-badge.today {
+    background: linear-gradient(135deg, #ff8c00, #ffb830);
+    color: white;
+  }
+
+  /* CARDS */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .forecast-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 16px var(--border);
+    border-top: 4px solid var(--sky-light);
+    transition: transform 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .forecast-card:nth-child(2) { animation-delay: 0.1s; }
+  .forecast-card:nth-child(3) { animation-delay: 0.2s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .forecast-card:hover { transform: translateY(-3px); }
+
+  .card-source {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--sky);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .card-weather {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--text-dark);
+    margin-bottom: 16px;
+  }
+
+  .card-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  .stat-label { color: var(--text-mid); }
+
+  .stat-value {
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .precip-bar-wrap {
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .precip-bar {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--sky-light), var(--sky));
+    transition: width 0.6s ease;
+  }
+
+  /* ACTUAL CARD */
+  .actual-card {
+    background: linear-gradient(135deg, #054a7a, #0a84c8);
+    color: white;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px rgba(5,74,122,0.3);
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .actual-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .actual-weather {
+    font-size: 28px;
+    font-weight: 900;
+    margin-bottom: 16px;
+  }
+
+  .actual-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .actual-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .actual-stat-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+  }
+
+  .actual-stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    font-family: 'Oswald', sans-serif;
+    color: var(--sun-bright);
+  }
+
+  /* SCORES */
+  .scores-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 16px var(--border);
+    animation: fadeUp 0.4s ease 0.15s both;
+  }
+
+  .scores-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--sky);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .score-row:last-child { border-bottom: none; }
+
+  .score-rank {
+    font-family: 'Oswald', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    width: 28px;
+    text-align: center;
+  }
+
+  .rank-1 { color: #ffd700; }
+  .rank-2 { color: #aaa; }
+  .rank-3 { color: #cd7f32; }
+
+  .score-source { flex: 1; font-weight: 700; }
+
+  .score-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--sun);
+    min-width: 60px;
+    text-align: right;
+  }
+
+  .score-bar-wrap {
+    width: 100px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .score-bar {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--sky-light), var(--sun-bright));
+    transition: width 0.6s ease;
+  }
+
+  /* AI SECTION */
+  .ai-section {
+    background: #0d2a42;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px rgba(13,42,66,0.3);
+    animation: fadeUp 0.4s ease 0.2s both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--sky-light), var(--sun-bright));
+  }
+
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,180,0,0.15);
+    border: 1px solid rgba(255,180,0,0.3);
+    color: var(--sun-bright);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+    font-family: 'Oswald', sans-serif;
+  }
+
+  .ai-text {
+    font-size: 15px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.9;
+  }
+
+  .ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.4);
+    font-size: 14px;
+  }
+
+  .ai-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--sun-bright);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  /* HISTORY TABLE */
+  .history-section {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 16px var(--border);
+    overflow-x: auto;
+    animation: fadeUp 0.4s ease 0.1s both;
+  }
+
+  .history-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--sky);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--bg);
+    color: var(--text-mid);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dark);
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+
+  .score-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  .score-high { background: #e6f7ee; color: #1a7a45; }
+  .score-mid { background: #fff8e6; color: #a06000; }
+  .score-low { background: #ffeaea; color: #c0392b; }
+
+  @media (max-width: 600px) {
+    .search-panel { flex-direction: column; align-items: stretch; }
+    .search-btn { width: 100%; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .actual-stats { gap: 16px; }
+    .score-bar-wrap { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <a href="https://kakoten.jp" class="header-logo">かこてん</a>
+    <div class="header-subtitle">WEATHER FORECAST TRACKER</div>
+  </div>
+</header>
+
+<div class="search-panel">
+  <div class="field">
+    <label>地域</label>
+    <select id="area-select">
+      <option value="東京">🗼 東京</option>
+      <option value="大阪">🏯 大阪</option>
+      <option value="名古屋">🌸 名古屋</option>
+      <option value="札幌">⛄ 札幌</option>
+      <option value="福岡">🌸 福岡</option>
+      <option value="仙台">🌿 仙台</option>
+      <option value="広島">⛩️ 広島</option>
+      <option value="那覇">🌺 那覇</option>
+      <option value="金沢">🍶 金沢</option>
+      <option value="鹿児島">🌋 鹿児島</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>日付</label>
+    <input type="date" id="date-input">
+  </div>
+  <button class="search-btn" onclick="search()">🔍 検索</button>
+</div>
+
+<main>
+  <div id="result">
+    <div class="state-msg">
+      <div class="icon">🌤️</div>
+      <p>地域と日付を選んで検索してください</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  // 今日の日付をデフォルトに
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  document.getElementById('date-input').value = todayStr;
+  document.getElementById('date-input').max = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  })();
+
+  const SUPABASE_URL = 'https://ruozldlqsdelhnlorvmq.supabase.co';
+  const SUPABASE_KEY = document.currentScript ? '' : '';
+
+  async function supabaseFetch(table, params) {
+    const url = new URL(`${SUPABASE_URL}/rest/v1/${table}`);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+    const res = await fetch(url, {
+      headers: {
+        'apikey': window.__SUPABASE_ANON_KEY || '',
+        'Authorization': 'Bearer ' + (window.__SUPABASE_ANON_KEY || ''),
+        'Content-Type': 'application/json'
+      }
+    });
+    return res.json();
+  }
+
+  function getDateLabel(dateStr) {
+    const d = new Date(dateStr);
+    const t = new Date(todayStr);
+    const diff = Math.round((d - t) / (1000*60*60*24));
+    if (diff === 0) return { label: '今日', cls: 'today' };
+    if (diff > 0) return { label: `${diff}日後`, cls: 'future' };
+    return { label: `${Math.abs(diff)}日前`, cls: 'past' };
+  }
+
+  function isFuture(dateStr) {
+    return dateStr > todayStr;
+  }
+
+  function isPast(dateStr) {
+    return dateStr < todayStr;
+  }
+
+  function scoreChip(score) {
+    if (score === null || score === undefined) return '<span style="color:#aaa">—</span>';
+    const cls = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
+    return `<span class="score-chip ${cls}">${score}点</span>`;
+  }
+
+  function sourceName(src) {
+    const map = { jma: '🏛️ 気象庁', tenki: '🌸 tenki.jp', yahoo: '🟡 Yahoo天気' };
+    return map[src] || src;
+  }
+
+  async function search() {
+    const area = document.getElementById('area-select').value;
+    const date = document.getElementById('date-input').value;
+    if (!date) return;
+
+    const resultEl = document.getElementById('result');
+    resultEl.innerHTML = `<div class="loading"><div class="spinner"></div><p>データを取得中...</p></div>`;
+
+    try {
+      const { label, cls } = getDateLabel(date);
+      const future = isFuture(date);
+      const past = isPast(date);
+
+      // 予報データ取得
+      const forecasts = await supabaseFetch('forecasts', {
+        select: 'source,weather_text,precip_prob,temp_max,temp_min,collected_at',
+        area_name: `eq.${area}`,
+        target_date: `eq.${date}`,
+        order: 'collected_at.desc'
+      });
+
+      // ソースごとに最新1件
+      const latestMap = {};
+      for (const row of (forecasts || [])) {
+        if (!latestMap[row.source]) latestMap[row.source] = row;
+      }
+      const latestForecasts = Object.values(latestMap);
+
+      let html = `
+        <div class="result-header">
+          <div class="result-title">${area} の天気</div>
+          <span class="date-badge ${cls}">${date}（${label}）</span>
+        </div>
+      `;
+
+      if (past) {
+        // 過去：実際の結果 + 各社予報 + スコア + 直近7日履歴
+        const actuals = await supabaseFetch('actuals', {
+          select: '*',
+          area_name: `eq.${area}`,
+          obs_date: `eq.${date}`
+        });
+
+        const actual = actuals?.[0];
+        if (actual) {
+          html += `
+            <div class="actual-card">
+              <div class="actual-label">✅ 実際の天気</div>
+              <div class="actual-weather">${actual.weather_text || '—'}</div>
+              <div class="actual-stats">
+                <div class="actual-stat">
+                  <div class="actual-stat-label">最高気温</div>
+                  <div class="actual-stat-value">${actual.temp_max ?? '—'}℃</div>
+                </div>
+                <div class="actual-stat">
+                  <div class="actual-stat-label">最低気温</div>
+                  <div class="actual-stat-value">${actual.temp_min ?? '—'}℃</div>
+                </div>
+                <div class="actual-stat">
+                  <div class="actual-stat-label">降水量</div>
+                  <div class="actual-stat-value">${actual.precipitation ?? '—'}mm</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // スコア
+        const scores = await supabaseFetch('scores', {
+          select: 'source,score',
+          area_name: `eq.${area}`,
+          target_date: `eq.${date}`,
+          order: 'score.desc'
+        });
+
+        if (scores?.length > 0) {
+          html += `<div class="scores-section"><div class="scores-title">📊 予報スコア</div>`;
+          scores.forEach((s, i) => {
+            html += `
+              <div class="score-row">
+                <span class="score-rank rank-${i+1}">${i+1}</span>
+                <span class="score-source">${sourceName(s.source)}</span>
+                <div class="score-bar-wrap"><div class="score-bar" style="width:${s.score || 0}%"></div></div>
+                <span class="score-num">${s.score ?? '—'}点</span>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+
+        // 各社予報（振り返り）
+        if (latestForecasts.length > 0) {
+          html += `<div class="scores-title" style="margin-bottom:12px; font-family:'Oswald',sans-serif; font-size:13px; letter-spacing:2px; color:var(--sky); text-transform:uppercase;">📋 各社の予報（振り返り）</div>`;
+          html += `<div class="cards-grid">`;
+          latestForecasts.forEach(f => {
+            const prob = f.precip_prob ?? 0;
+            html += `
+              <div class="forecast-card">
+                <div class="card-source">${sourceName(f.source)}</div>
+                <div class="card-weather">${f.weather_text || '—'}</div>
+                <div class="card-stats">
+                  <div class="stat-row"><span class="stat-label">降水確率</span><span class="stat-value">${prob}%</span></div>
+                  <div class="precip-bar-wrap"><div class="precip-bar" style="width:${prob}%"></div></div>
+                  <div class="stat-row"><span class="stat-label">最高気温</span><span class="stat-value">${f.temp_max ?? '—'}℃</span></div>
+                  <div class="stat-row"><span class="stat-label">最低気温</span><span class="stat-value">${f.temp_min ?? '—'}℃</span></div>
+                </div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        }
+
+        // 直近7日スコア履歴
+        const sevenDaysAgo = new Date(date);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        const fromDate = sevenDaysAgo.toISOString().split('T')[0];
+
+        const history = await supabaseFetch('scores', {
+          select: 'target_date,source,score',
+          area_name: `eq.${area}`,
+          target_date: `gte.${fromDate}`,
+          order: 'target_date.desc,score.desc'
+        });
+
+        if (history?.length > 0) {
+          // 日付×ソースのマップ作成
+          const dateMap = {};
+          for (const row of history) {
+            if (!dateMap[row.target_date]) dateMap[row.target_date] = {};
+            dateMap[row.target_date][row.source] = row.score;
+          }
+          const sources = ['jma', 'tenki', 'yahoo'];
+          html += `
+            <div class="history-section">
+              <div class="history-title">📅 直近7日間のスコア</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>日付</th>
+                    <th>気象庁</th>
+                    <th>tenki.jp</th>
+                    <th>Yahoo天気</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          Object.entries(dateMap).sort((a,b) => b[0].localeCompare(a[0])).forEach(([d, srcMap]) => {
+            html += `<tr><td>${d}</td>`;
+            sources.forEach(s => {
+              html += `<td>${scoreChip(srcMap[s])}</td>`;
+            });
+            html += `</tr>`;
+          });
+          html += `</tbody></table></div>`;
+        }
+
+      } else {
+        // 未来・今日：各社予報 + AI予報
+        if (latestForecasts.length > 0) {
+          html += `<div class="cards-grid">`;
+          latestForecasts.forEach(f => {
+            const prob = f.precip_prob ?? 0;
+            html += `
+              <div class="forecast-card">
+                <div class="card-source">${sourceName(f.source)}</div>
+                <div class="card-weather">${f.weather_text || '—'}</div>
+                <div class="card-stats">
+                  <div class="stat-row"><span class="stat-label">降水確率</span><span class="stat-value">${prob}%</span></div>
+                  <div class="precip-bar-wrap"><div class="precip-bar" style="width:${prob}%"></div></div>
+                  <div class="stat-row"><span class="stat-label">最高気温</span><span class="stat-value">${f.temp_max ?? '—'}℃</span></div>
+                  <div class="stat-row"><span class="stat-label">最低気温</span><span class="stat-value">${f.temp_min ?? '—'}℃</span></div>
+                </div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+        } else {
+          html += `<div class="state-msg"><div class="icon">📭</div><p>この日の予報データがまだありません</p></div>`;
+        }
+
+        // AI予報（今日・明日のみ）
+        if (latestForecasts.length > 0) {
+          html += `
+            <div class="ai-section">
+              <div class="ai-badge">✨ AI ANALYSIS</div>
+              <div id="ai-content">
+                <div class="ai-loading"><div class="ai-spinner"></div><span>AIが分析中...</span></div>
+              </div>
+            </div>
+          `;
+          // AI予報を非同期で取得
+          loadAiForecast(area, date, latestForecasts);
+        }
+      }
+
+      resultEl.innerHTML = html;
+
+    } catch (e) {
+      resultEl.innerHTML = `<div class="state-msg"><div class="icon">⚠️</div><p>エラーが発生しました: ${e.message}</p></div>`;
+    }
+  }
+
+  async function loadAiForecast(area, date, forecasts) {
+    try {
+      const res = await fetch(`/api/forecast?area=${encodeURIComponent(area)}&date=${date}`);
+      const data = await res.json();
+      const el = document.getElementById('ai-content');
+      if (el) {
+        if (data.result) {
+          el.innerHTML = `<div class="ai-text">${data.result}</div>`;
+        } else {
+          el.innerHTML = `<div style="color:rgba(255,120,120,0.8);font-size:14px;">AI分析を取得できませんでした</div>`;
+        }
+      }
+    } catch (e) {
+      const el = document.getElementById('ai-content');
+      if (el) el.innerHTML = `<div style="color:rgba(255,120,120,0.8);font-size:14px;">AI接続エラー</div>`;
+    }
+  }
+
+  // Supabase Anon Keyをサーバーから取得
+  async function init() {
+    try {
+      const res = await fetch('/api/config');
+      const data = await res.json();
+      if (data.supabaseAnonKey) {
+        window.__SUPABASE_ANON_KEY = data.supabaseAnonKey;
+      }
+    } catch (e) {
+      console.error('Config load failed', e);
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>
