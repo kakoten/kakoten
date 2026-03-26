@@ -540,14 +540,9 @@
     </div>
     <p class="tagline">天気予報、どこが一番当たってる？</p>
     <p class="sub-tagline">気象庁・tenki.jp・Yahoo天気の予報精度を<br>毎日データで比較・検証するサービスです。</p>
-    <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
-      <a href="https://x.com/kakoten_jp" target="_blank" class="hero-cta">
-        📊 毎日の結果をXで見る
-      </a>
-      <a href="/app.html" class="hero-cta" style="background:linear-gradient(135deg,#054a7a,#0a84c8);">
-        🔍 天気を調べる
-      </a>
-    </div>
+    <a href="https://x.com/kakoten_jp" target="_blank" class="hero-cta">
+      📊 毎日の結果をXで見る
+    </a>
   </div>
 
   <div class="wave">
@@ -598,37 +593,9 @@
       <p class="ranking-note">※ 東京・直近集計データ（毎日更新）</p>
     </div>
 
-    <div class="ranking-table reveal">
-      <div class="ranking-header">
-        <span>順位</span>
-        <span>サービス</span>
-        <span>スコア</span>
-        <span>精度</span>
-        <span>集計日数</span>
-      </div>
-
-      <div class="ranking-row rank-1">
-        <span class="rank-num">1</span>
-        <span class="rank-source">🌸 tenki.jp</span>
-        <span class="rank-score">78点</span>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:78%"></div></div>
-        <span class="rank-days">1日</span>
-      </div>
-
-      <div class="ranking-row rank-2">
-        <span class="rank-num">2</span>
-        <span class="rank-source">🏛️ 気象庁</span>
-        <span class="rank-score">72点</span>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:72%"></div></div>
-        <span class="rank-days">1日</span>
-      </div>
-
-      <div class="ranking-row rank-3">
-        <span class="rank-num">3</span>
-        <span class="rank-source">🟡 Yahoo天気</span>
-        <span class="rank-score">18点</span>
-        <div class="rank-bar-wrap"><div class="rank-bar" style="width:18%; background: linear-gradient(90deg, #38b6ff, #ff6b6b)"></div></div>
-        <span class="rank-days">1日</span>
+    <div class="ranking-table reveal" id="ranking-table">
+      <div style="padding:24px; text-align:center; color:rgba(255,255,255,0.4); font-size:14px;">
+        読み込み中...
       </div>
     </div>
 
@@ -711,6 +678,59 @@
     }
   }
   loadAiForecast();
+
+  // ランキング動的取得
+  async function loadRanking() {
+    try {
+      const res = await fetch('/api/config');
+      const { supabaseUrl, supabaseAnonKey } = await res.json();
+
+      const url = new URL(`${supabaseUrl}/rest/v1/scores`);
+      url.searchParams.append('select', 'source,score,target_date');
+      url.searchParams.append('area_name', 'eq.東京');
+      url.searchParams.append('order', 'target_date.desc,score.desc');
+      url.searchParams.append('limit', '30');
+
+      const r = await fetch(url, {
+        headers: { 'apikey': supabaseAnonKey, 'Authorization': 'Bearer ' + supabaseAnonKey }
+      });
+      const data = await r.json();
+
+      const map = {};
+      for (const row of data) {
+        if (!map[row.source]) map[row.source] = { total: 0, count: 0 };
+        map[row.source].total += row.score;
+        map[row.source].count++;
+      }
+
+      const sourceNames = { jma: '🏛️ 気象庁', tenki: '🌸 tenki.jp', yahoo: '🟡 Yahoo天気' };
+      const ranked = Object.entries(map)
+        .map(([src, v]) => ({ src, avg: Math.round(v.total / v.count * 10) / 10, days: v.count }))
+        .sort((a, b) => b.avg - a.avg);
+
+      const medals = ['rank-1', 'rank-2', 'rank-3'];
+      let html = `<div class="ranking-header">
+        <span>順位</span><span>サービス</span><span>スコア</span><span>精度</span><span>集計日数</span>
+      </div>`;
+
+      ranked.forEach((item, i) => {
+        const barColor = item.avg < 40 ? 'background:linear-gradient(90deg,#38b6ff,#ff6b6b)' : '';
+        html += `
+          <div class="ranking-row ${medals[i] || ''}">
+            <span class="rank-num">${i + 1}</span>
+            <span class="rank-source">${sourceNames[item.src] || item.src}</span>
+            <span class="rank-score">${item.avg}点</span>
+            <div class="rank-bar-wrap"><div class="rank-bar" style="width:${item.avg}%;${barColor}"></div></div>
+            <span class="rank-days">${item.days}日</span>
+          </div>`;
+      });
+
+      document.getElementById('ranking-table').innerHTML = html;
+    } catch (e) {
+      console.error('Ranking load error', e);
+    }
+  }
+  loadRanking();
 
   // Scroll reveal
   const reveals = document.querySelectorAll('.reveal');
