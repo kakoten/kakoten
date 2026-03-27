@@ -638,6 +638,28 @@
     return map[src] || src;
   }
 
+  // 気象庁のweather_codeを日本語テキストに変換
+  function weatherCodeToText(code) {
+    const map = {
+      100: '晴れ', 101: '晴れ時々曇り', 102: '晴れ一時雨', 103: '晴れ時々雨',
+      110: '晴れのち曇り', 111: '晴れのち曇り', 112: '晴れのち一時雨', 113: '晴れのち雨',
+      200: '曇り', 201: '曇り時々晴れ', 202: '曇り一時雨', 203: '曇り時々雨',
+      204: '曇り一時雪', 205: '曇り時々雪', 209: '霧',
+      210: '曇りのち晴れ', 211: '曇りのち晴れ', 212: '曇りのち一時雨', 213: '曇りのち雨',
+      300: '雨', 301: '雨時々晴れ', 302: '雨時々止む', 303: '雨時々雪',
+      311: '雨のち晴れ', 313: '雨のち曇り',
+      400: '雪', 401: '雪時々晴れ', 402: '雪時々止む',
+      411: '雪のち晴れ', 413: '雪のち曇り'
+    };
+    return map[parseInt(code)] || `天気コード${code}`;
+  }
+
+  function getWeatherText(f) {
+    if (f.weather_text && f.weather_text !== 'NULL') return f.weather_text;
+    if (f.weather_code) return weatherCodeToText(f.weather_code);
+    return '—';
+  }
+
   async function search() {
     const area = document.getElementById('area-select').value;
     const date = document.getElementById('date-input').value;
@@ -653,7 +675,7 @@
 
       // 予報データ取得
       const forecasts = await supabaseFetch('forecasts', {
-        select: 'source,weather_text,precip_prob,temp_max,temp_min,collected_at',
+        select: 'source,weather_text,weather_code,precip_prob,temp_max,temp_min,collected_at',
         area_name: `eq.${area}`,
         target_date: `eq.${date}`,
         order: 'collected_at.desc'
@@ -737,7 +759,7 @@
             html += `
               <div class="forecast-card">
                 <div class="card-source">${sourceName(f.source)}</div>
-                <div class="card-weather">${f.weather_text || '—'}</div>
+                <div class="card-weather">${getWeatherText(f)}</div>
                 <div class="card-stats">
                   <div class="stat-row"><span class="stat-label">降水確率</span><span class="stat-value">${prob}%</span></div>
                   <div class="precip-bar-wrap"><div class="precip-bar" style="width:${prob}%"></div></div>
@@ -750,49 +772,7 @@
           html += `</div>`;
         }
 
-        // 直近7日スコア履歴
-        const sevenDaysAgo = new Date(date);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-        const fromDate = sevenDaysAgo.toISOString().split('T')[0];
 
-        const history = await supabaseFetch('scores', {
-          select: 'target_date,source,score',
-          area_name: `eq.${area}`,
-          target_date: `gte.${fromDate}`,
-          order: 'target_date.desc,score.desc'
-        });
-
-        if (history?.length > 0) {
-          // 日付×ソースのマップ作成
-          const dateMap = {};
-          for (const row of history) {
-            if (!dateMap[row.target_date]) dateMap[row.target_date] = {};
-            dateMap[row.target_date][row.source] = row.score;
-          }
-          const sources = ['jma', 'tenki', 'yahoo'];
-          html += `
-            <div class="history-section">
-              <div class="history-title">📅 直近7日間のスコア</div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>日付</th>
-                    <th>気象庁</th>
-                    <th>tenki.jp</th>
-                    <th>Yahoo天気</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-          Object.entries(dateMap).sort((a,b) => b[0].localeCompare(a[0])).forEach(([d, srcMap]) => {
-            html += `<tr><td>${d}</td>`;
-            sources.forEach(s => {
-              html += `<td>${scoreChip(srcMap[s])}</td>`;
-            });
-            html += `</tr>`;
-          });
-          html += `</tbody></table></div>`;
-        }
 
       } else {
         // 未来・今日：各社予報 + AI予報
@@ -803,7 +783,7 @@
             html += `
               <div class="forecast-card">
                 <div class="card-source">${sourceName(f.source)}</div>
-                <div class="card-weather">${f.weather_text || '—'}</div>
+                <div class="card-weather">${getWeatherText(f)}</div>
                 <div class="card-stats">
                   <div class="stat-row"><span class="stat-label">降水確率</span><span class="stat-value">${prob}%</span></div>
                   <div class="precip-bar-wrap"><div class="precip-bar" style="width:${prob}%"></div></div>
