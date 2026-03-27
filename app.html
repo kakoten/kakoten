@@ -700,7 +700,7 @@
         const actuals = await supabaseFetch('actuals', {
           select: '*',
           area_name: `eq.${area}`,
-          obs_date: `eq.${date}`
+          target_date: `eq.${date}`
         });
 
         const actual = actuals?.[0];
