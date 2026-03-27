@@ -6,6 +6,18 @@
 <title>かこてん — 天気予報、当たってる？</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a84c8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="かこてん">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
 <style>
   :root {
     --sky: #0a84c8;
@@ -540,14 +552,9 @@
     </div>
     <p class="tagline">天気予報、どこが一番当たってる？</p>
     <p class="sub-tagline">気象庁・tenki.jp・Yahoo天気の予報精度を<br>毎日データで比較・検証するサービスです。</p>
-      <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
-        <a href="https://x.com/kakoten_jp" target="_blank" class="hero-cta">
-          📊 毎日の結果をXで見る
-        </a>
-        <a href="/app.html" class="hero-cta" style="background:linear-gradient(135deg,#054a7a,#0a84c8);">
-          🔍 天気を調べる
-        </a>
-      </div>
+    <a href="https://x.com/kakoten_jp" target="_blank" class="hero-cta">
+      📊 毎日の結果をXで見る
+    </a>
   </div>
 
   <div class="wave">
