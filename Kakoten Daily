@@ -1,0 +1,74 @@
+on:
+  schedule:
+    - cron: '0 22 * * *'   # JST 7:00
+    - cron: '30 22 * * *'  # JST 7:30
+    - cron: '45 22 * * *'  # JST 7:45
+    - cron: '0 23 * * *'   # JST 8:00
+    - cron: '0 0 * * *'    # JST 9:00
+  workflow_dispatch:
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+  TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+  TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+  TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+
+jobs:
+  collect-jma:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 22 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python scripts/jma_collector.py
+
+  collect-tenki:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '30 22 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python scripts/scrape_tenki.py
+
+  collect-yahoo:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '45 22 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python scripts/scrape_yahoo.py
+
+  verify:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 23 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python scripts/kakoten_verify.py
+
+  tweet:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python scripts/tweet_generator.py
