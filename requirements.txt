@@ -1,0 +1,7 @@
+anthropic
+supabase
+requests
+requests-oauthlib
+psycopg2-binary
+beautifulsoup4
+selenium
